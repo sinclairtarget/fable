@@ -1,7 +1,9 @@
 import argparse
+import sys
 
 from . import VERSION
-from .subcommands import init
+from . import subcommands
+from .lib.errors import FableError
 
 
 def run():
@@ -11,10 +13,13 @@ def run():
         print(VERSION)
         return
 
-    if args.subcommand:
-        args.run_subcommand()
-    else:
-        _run_status()
+    try:
+        if args.subcommand:
+            args.run_subcommand()
+        else:
+            _run_status()
+    except FableError as e:
+        print(f"Error: {e}.", file=sys.stderr)
 
 
 def _parse_args():
@@ -33,12 +38,14 @@ def _parse_args():
 
     _add_init_subparser(subparsers)
     _add_status_subparser(subparsers)
+    _add_tree_subparser(subparsers)
+    _add_weave_subparser(subparsers)
 
     return parser.parse_args()
 
 
 def _run_init():
-    init.run_subcommand()
+    subcommands.init.run_subcommand()
 
 
 def _add_init_subparser(subparsers):
@@ -51,7 +58,7 @@ def _add_init_subparser(subparsers):
 
 
 def _run_status():
-    raise NotImplementedError
+    subcommands.status.run_subcommand()
 
 
 def _add_status_subparser(subparsers):
@@ -62,3 +69,31 @@ def _add_status_subparser(subparsers):
     )
 
     subparser.set_defaults(run_subcommand=_run_status)
+
+
+def _run_tree():
+    subcommands.tree.run_subcommand()
+
+
+def _add_tree_subparser(subparsers):
+    subparser = subparsers.add_parser(
+        "tree",
+        aliases=["t"],
+        help="Show patch tree",
+    )
+
+    subparser.set_defaults(run_subcommand=_run_tree)
+
+
+def _run_weave():
+    subcommands.weave.run_subcommand()
+
+
+def _add_weave_subparser(subparsers):
+    subparser = subparsers.add_parser(
+        "weave",
+        aliases=["w"],
+        help="Show documentation based on patch tree",
+    )
+
+    subparser.set_defaults(run_subcommand=_run_weave)

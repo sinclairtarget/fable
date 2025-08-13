@@ -1,10 +1,15 @@
 from pathlib import Path
+import sys
 
 from . import git
+from .errors import NotInitializedError
+
+
+FABLE_DB_DIRNAME = ".fable"
 
 
 def create():
-    fable_db_path = Path(".fable")
+    fable_db_path = Path(FABLE_DB_DIRNAME)
     if fable_db_path.exists():
         print(
             "Warning: Fable repository already exists. Doing nothing.",
@@ -22,3 +27,11 @@ def create():
 
     git.run("add", ".fable/")
     git.run("commit", "-m", "Root Fable commit.")
+
+
+def status():
+    fable_db_path = Path(FABLE_DB_DIRNAME)
+    if not fable_db_path.exists():
+        raise NotInitializedError
+
+    print("ok")
