@@ -1,5 +1,4 @@
-from .git import run
+from . import cli
 
 
-output = run("git", "status")
-print(output, end='')
+cli.run()
