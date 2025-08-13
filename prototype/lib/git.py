@@ -4,7 +4,7 @@ import subprocess
 def run(subcommand, *args):
     args = [*args]
     completed = subprocess.run(
-        [subcommand] + args,
+        ["git", subcommand] + args,
         check=True,
         capture_output=True,
         text=True,
