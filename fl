@@ -1,5 +1,0 @@
-#! /bin/bash
-
-DIR=$(dirname -- "$(readlink -f "$0")")
-export PYTHONPATH=$DIR
-python -m prototype $@
