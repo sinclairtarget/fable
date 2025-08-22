@@ -23,7 +23,7 @@ pub fn run(out: *Io.Writer, args: []const []const u8) !void {
     } else if (std.mem.eql(u8, args[1], "log")) {
         try runLog(out);
     } else if (std.mem.eql(u8, args[1], "commit")) {
-        try runCommit(out);
+        try runCommit(out, args[0], args[2..]);
     } else if (std.mem.eql(u8, args[1], "checkout")) {
         try runCheckout(out);
     } else if (std.mem.eql(u8, args[1], "branch")) {
@@ -62,7 +62,17 @@ pub fn runLog(out: *Io.Writer) !void {
     try out.print("Ran log subcommand!\n", .{});
 }
 
-pub fn runCommit(out: *Io.Writer) !void {
+pub fn runCommit(
+    out: *Io.Writer, 
+    progname: []const u8, 
+    args: []const []const u8,
+) !void {
+    if (args.len < 1) {
+        try print_usage(out, progname);
+        die("Message required for commit\n", .{});
+    }
+
+    try repo.saveCommit(args[0]);
     try out.print("Ran commit subcommand!\n", .{});
 }
 
