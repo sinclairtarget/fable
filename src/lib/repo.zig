@@ -2,6 +2,7 @@ const std = @import("std");
 const fs = std.fs;
 const Io = std.Io;
 const crypto = std.crypto;
+const Allocator = std.mem.Allocator;
 
 const Commit = @import("commit.zig").Commit;
 
@@ -38,25 +39,47 @@ pub fn reinit() !void {
             else => return e,
         }
     };
+
+    // Make root commit
+    const commit = Commit{
+        .message = "root commit",
+        .author = "fable",
+        .timestamp = std.time.timestamp(),
+        .parent = null,
+    };
+    try saveCommit(commit);
 }
 
-pub fn saveCommit(message: []const u8) !void {
+pub fn makeCommit(alloc: Allocator, message: []const u8) !void {
+    const head_commit_hash = try getHeadCommit(alloc);
     const commit = Commit{
         .message = message,
         .author = "Sinclair Target",
         .timestamp = std.time.timestamp(),
+        .parent = head_commit_hash,
     };
+    try saveCommit(commit);
+}
 
+fn saveCommit(commit: Commit) !void {
     var commit_buf: [512]u8 = undefined; // We will write the commit here
     var commit_writer: Io.Writer = .fixed(&commit_buf);
 
     const endian = std.builtin.Endian.big;
+
     try commit_writer.writeInt(u16, @intCast(commit.message.len), endian);
     try commit_writer.writeAll(commit.message);
     try commit_writer.writeInt(u16, @intCast(commit.author.len), endian);
     try commit_writer.writeAll(commit.author);
     try commit_writer.writeInt(u16, 8, endian);
     try commit_writer.writeInt(i64, commit.timestamp, endian);
+
+    if (commit.parent) |parent| {
+        try commit_writer.writeInt(u16, @intCast(parent.len), endian);
+        try commit_writer.writeAll(parent);
+    } else {
+        try commit_writer.writeInt(u16, 0, endian);
+    }
 
     // Now we hash it to get the filename
     var h = crypto.hash.sha2.Sha256.init(.{});
@@ -100,7 +123,7 @@ pub fn saveCommit(message: []const u8) !void {
     }
 }
 
-pub fn getHeadCommit(alloc: std.mem.Allocator) ![]const u8 {
+pub fn getHeadCommit(alloc: Allocator) ![]const u8 {
     const buf: []u8 = try alloc.alloc(u8, 128);
 
     const head_commit_hash = blk: {
