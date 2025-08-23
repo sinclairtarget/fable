@@ -99,3 +99,23 @@ pub fn saveCommit(message: []const u8) !void {
         try writer.flush();
     }
 }
+
+pub fn getHeadCommit(alloc: std.mem.Allocator) ![]const u8 {
+    const buf: []u8 = try alloc.alloc(u8, 128);
+
+    const head_commit_hash = blk: {
+        const cwd = fs.cwd();
+
+        var refs = try cwd.openDir(".fable/refs", .{}); // TODO: Construct string
+        defer refs.close();
+
+        var file = try refs.openFile("HEAD", .{});
+        defer file.close();
+
+        var file_reader = file.reader(buf);
+        const reader = &file_reader.interface;
+        break :blk try reader.takeDelimiterExclusive('\n');
+    };
+
+    return head_commit_hash;
+}

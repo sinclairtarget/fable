@@ -1,10 +1,11 @@
 const std = @import("std");
 const Io = std.Io;
+const Allocator = std.mem.Allocator;
 
 const die = @import("fatal.zig").die;
 const repo = @import("lib/repo.zig");
 
-pub fn run(out: *Io.Writer, args: []const []const u8) !void {
+pub fn run(alloc: Allocator, out: *Io.Writer, args: []const []const u8) !void {
     if (args.len <= 1) {
         try print_usage(out, args[0]);
         die("Not enough arguments. Expecting subcommand.", .{});
@@ -17,7 +18,7 @@ pub fn run(out: *Io.Writer, args: []const []const u8) !void {
     } else if (std.mem.eql(u8, args[1], "record")) {
         try runRecord(out);
     } else if (std.mem.eql(u8, args[1], "status")) {
-        try runStatus(out);
+        try runStatus(alloc, out);
     } else if (std.mem.eql(u8, args[1], "tree")) {
         try runTree(out);
     } else if (std.mem.eql(u8, args[1], "log")) {
@@ -38,28 +39,35 @@ pub fn run(out: *Io.Writer, args: []const []const u8) !void {
 }
 
 pub fn runInit(out: *Io.Writer) !void {
+    _ = out;
     try repo.reinit();
-    try out.print("Ran init subcommand!\n", .{});
 }
 
 pub fn runNew(out: *Io.Writer) !void {
     try out.print("Ran new subcommand!\n", .{});
+    try out.flush();
 }
 
 pub fn runRecord(out: *Io.Writer) !void {
     try out.print("Ran record subcommand!\n", .{});
+    try out.flush();
 }
 
-pub fn runStatus(out: *Io.Writer) !void {
-    try out.print("Ran status subcommand!\n", .{});
+pub fn runStatus(alloc: Allocator, out: *Io.Writer) !void {
+    const head_commit_hash = try repo.getHeadCommit(alloc);
+    const short_hash = head_commit_hash[0..6];
+    try out.print("On commit {s}\n", .{short_hash});
+    try out.flush();
 }
 
 pub fn runTree(out: *Io.Writer) !void {
     try out.print("Ran tree subcommand!\n", .{});
+    try out.flush();
 }
 
 pub fn runLog(out: *Io.Writer) !void {
     try out.print("Ran log subcommand!\n", .{});
+    try out.flush();
 }
 
 pub fn runCommit(
@@ -73,23 +81,26 @@ pub fn runCommit(
     }
 
     try repo.saveCommit(args[0]);
-    try out.print("Ran commit subcommand!\n", .{});
 }
 
 pub fn runCheckout(out: *Io.Writer) !void {
     try out.print("Ran checkout subcommand!\n", .{});
+    try out.flush();
 }
 
 pub fn runBranch(out: *Io.Writer) !void {
     try out.print("Ran branch subcommand!\n", .{});
+    try out.flush();
 }
 
 pub fn runMerge(out: *Io.Writer) !void {
     try out.print("Ran branch subcommand!\n", .{});
+    try out.flush();
 }
 
 pub fn runWeave(out: *Io.Writer) !void {
     try out.print("Ran weave subcommand!\n", .{});
+    try out.flush();
 }
 
 fn print_usage(out: *Io.Writer, progname: []const u8) !void {
