@@ -22,7 +22,7 @@ pub fn run(alloc: Allocator, out: *Io.Writer, args: []const []const u8) !void {
     } else if (std.mem.eql(u8, args[1], "tree")) {
         try runTree(out);
     } else if (std.mem.eql(u8, args[1], "log")) {
-        try runLog(out);
+        try runLog(alloc, out);
     } else if (std.mem.eql(u8, args[1], "commit")) {
         try runCommit(alloc, out, args[0], args[2..]);
     } else if (std.mem.eql(u8, args[1], "checkout")) {
@@ -65,8 +65,15 @@ pub fn runTree(out: *Io.Writer) !void {
     try out.flush();
 }
 
-pub fn runLog(out: *Io.Writer) !void {
-    try out.print("Ran log subcommand!\n", .{});
+pub fn runLog(alloc: Allocator, out: *Io.Writer) !void {
+    var iter = try repo.commitsIterator(alloc);
+    while (try iter.next()) |commit| {
+        try out.print("{s}: {s} ({s})\n", .{
+            iter.current_hash.?, 
+            commit.message, 
+            commit.author,
+        });
+    }
     try out.flush();
 }
 
