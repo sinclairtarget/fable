@@ -1,15 +1,20 @@
 const std = @import("std");
 const fs = std.fs;
 const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 
-const Commit = @import("commit.zig").Commit;
+const model = @import("model.zig");
 const db = @import("db.zig");
+const working = @import("working.zig");
+const Commit = model.Commit;
+const Tree = model.Tree;
+const Blob = model.Blob;
 
 const fable_dirname = ".fable";
 const obj_dirname = "obj";
 const refs_dirname = "refs";
 
-pub fn reinit() !void {
+pub fn reinit(alloc: Allocator) !void {
     const cwd = fs.cwd();
 
     // Ensure .fable directory exists
@@ -39,25 +44,68 @@ pub fn reinit() !void {
         }
     };
 
+    // Root commit has empty tree
+    const empty_tree = Tree{
+        .children = &[_]Tree.Item{},
+    };
+    const tree_hash = try db.putTree(alloc, empty_tree);
+
     // Make root commit
     const commit = Commit{
         .message = "root commit",
         .author = "fable",
         .timestamp = std.time.timestamp(),
+        .tree = tree_hash,
         .parent = null,
     };
-    try db.saveCommit(commit);
+    try db.putCommit(commit);
+}
+
+fn filterFable(path: []const u8) bool {
+    return !std.mem.startsWith(u8, path, ".fable");
 }
 
 pub fn makeCommit(alloc: Allocator, message: []const u8) !void {
+    // Save blobs
+    var iter = try working.walkFiles(alloc, filterFable);
+    defer iter.deinit();
+
+    var tree_items: ArrayList(Tree.Item) = .empty;
+    defer tree_items.deinit(alloc);
+
+    const cwd = fs.cwd();
+    while (try iter.next()) |entry| {
+        var file = try cwd.openFile(entry.path, .{});
+        defer file.close();
+
+        var buf: [128]u8 = undefined;
+        var file_reader = file.reader(&buf);
+        const reader = &file_reader.interface;
+
+        var bytes: ArrayList(u8) = .empty;
+        defer bytes.deinit(alloc);
+        try reader.appendRemainingUnlimited(alloc, &bytes);
+
+        const blob = Blob{
+            .bytes = bytes.items,
+        };
+        const hash = try db.putBlob(alloc, blob);
+        try tree_items.append(alloc, .{ .path = entry.path, .hash = hash });
+    }
+
+    // Save tree
+    const tree_hash = try db.putTree(alloc, .{ .children = tree_items.items });
+
+    // Save commit
     const head_commit_hash = try getHeadCommit(alloc);
     const commit = Commit{
         .message = message,
         .author = "Sinclair Target",
         .timestamp = std.time.timestamp(),
+        .tree = tree_hash,
         .parent = head_commit_hash,
     };
-    try db.saveCommit(commit);
+    try db.putCommit(commit);
 }
 
 pub fn getHeadCommit(alloc: Allocator) ![]const u8 {
@@ -87,7 +135,7 @@ const CommitIterator = struct {
 
     pub fn next(self: *CommitIterator) !?*Commit {
         const hash = self.next_hash orelse return null;
-        const commit = try db.readCommit(self.alloc, hash);
+        const commit = try db.getCommit(self.alloc, hash);
         self.current_hash = hash;
         self.next_hash = commit.parent;
         return commit;

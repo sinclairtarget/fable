@@ -12,7 +12,7 @@ pub fn run(alloc: Allocator, out: *Io.Writer, args: []const []const u8) !void {
     }
 
     if (std.mem.eql(u8, args[1], "init")) {
-        try runInit(out);
+        try runInit(alloc, out);
     } else if (std.mem.eql(u8, args[1], "new")) {
         try runNew(out);
     } else if (std.mem.eql(u8, args[1], "record")) {
@@ -38,9 +38,9 @@ pub fn run(alloc: Allocator, out: *Io.Writer, args: []const []const u8) !void {
     }
 }
 
-pub fn runInit(out: *Io.Writer) !void {
+pub fn runInit(alloc: Allocator, out: *Io.Writer) !void {
     _ = out;
-    try repo.reinit();
+    try repo.reinit(alloc,);
 }
 
 pub fn runNew(out: *Io.Writer) !void {
