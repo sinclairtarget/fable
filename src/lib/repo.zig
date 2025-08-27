@@ -5,7 +5,6 @@ const ArrayList = std.ArrayList;
 
 const model = @import("model.zig");
 const db = @import("db.zig");
-const wd = @import("wd.zig");
 const Commit = model.Commit;
 const Tree = model.Tree;
 const Blob = model.Blob;
@@ -62,37 +61,7 @@ pub fn reinit(alloc: Allocator) !void {
 }
 
 pub fn makeCommit(alloc: Allocator, message: []const u8) !void {
-    // Save blobs
-    var iter = try wd.walkFiles(alloc);
-    defer iter.deinit();
-
-    var tree_items: ArrayList(Tree.Item) = .empty;
-    defer tree_items.deinit(alloc);
-
-    const cwd = fs.cwd();
-    while (try iter.next()) |entry| {
-        var file = try cwd.openFile(entry.path, .{});
-        defer file.close();
-
-        var buf: [128]u8 = undefined;
-        var file_reader = file.reader(&buf);
-        const reader = &file_reader.interface;
-
-        var bytes: ArrayList(u8) = .empty;
-        defer bytes.deinit(alloc);
-        try reader.appendRemainingUnlimited(alloc, &bytes);
-
-        const blob = Blob{
-            .bytes = bytes.items,
-        };
-        const hash = try db.putBlob(alloc, blob);
-        try tree_items.append(alloc, .{ .path = entry.path, .hash = hash });
-    }
-
-    // Save tree
-    const tree_hash = try db.putTree(alloc, .{ .children = tree_items.items });
-
-    // Save commit
+    const tree_hash = try makeTree(alloc, ".");
     const head_commit_hash = try getHeadCommit(alloc);
     const commit = Commit{
         .message = message,
@@ -102,6 +71,67 @@ pub fn makeCommit(alloc: Allocator, message: []const u8) !void {
         .parent = head_commit_hash,
     };
     try db.putCommit(commit);
+}
+
+fn lessThan(ctx: void, lhs: Tree.Item, rhs: Tree.Item) bool {
+    _ = ctx;
+    return std.mem.order(u8, lhs.hash, rhs.hash) == .lt;
+}
+
+fn makeTree(alloc: Allocator, dirpath: []const u8) ![]const u8 {
+    const cwd = fs.cwd();
+    var dir = try cwd.openDir(dirpath, .{.iterate = true});
+    defer dir.close();
+
+    var tree_items: ArrayList(Tree.Item) = .empty;
+    defer tree_items.deinit(alloc);
+
+    var iter = dir.iterate();
+    while (try iter.next()) |entry| {
+        if (std.mem.eql(u8, entry.name, ".fable")) {
+            continue; // ignore!
+        }
+
+        // TODO: Are we sure we want to use the OS-specific path separator?
+        const path = try fs.path.join(
+            alloc, 
+            &[_][]const u8{dirpath, entry.name},
+        );
+
+        if (entry.kind == .file) {
+            const hash = try makeBlob(alloc, path);
+            try tree_items.append(alloc, .{.path = entry.name, .hash = hash});
+        } else if (entry.kind == .directory) {
+            const hash = try makeTree(alloc, path);
+            try tree_items.append(alloc, .{.path = entry.name, .hash = hash});
+        }
+    }
+
+    // Ensure tree items are always in the same order! Sort by hash
+    std.sort.heap(Tree.Item, tree_items.items, {}, lessThan);
+
+    const tree_hash = try db.putTree(alloc, .{.children = tree_items.items});
+    return tree_hash;
+}
+
+fn makeBlob(alloc: Allocator, path: []const u8) ![]const u8 {
+    const cwd = fs.cwd();
+    var file = try cwd.openFile(path, .{});
+    defer file.close();
+
+    var buf: [128]u8 = undefined;
+    var file_reader = file.reader(&buf);
+    const reader = &file_reader.interface;
+
+    var bytes: ArrayList(u8) = .empty;
+    defer bytes.deinit(alloc);
+    try reader.appendRemainingUnlimited(alloc, &bytes);
+
+    const blob = Blob{
+        .bytes = bytes.items,
+    };
+    const hash = try db.putBlob(alloc, blob);
+    return hash;
 }
 
 pub fn getHeadCommit(alloc: Allocator) ![]const u8 {
