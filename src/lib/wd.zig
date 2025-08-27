@@ -34,10 +34,11 @@ pub const FileIterator = struct {
     }
 };
 
-pub fn walkFiles(
-    alloc: Allocator, 
-    filter: *const fn (p: []const u8) bool,
-) !FileIterator {
+fn filterFable(path: []const u8) bool {
+    return !std.mem.startsWith(u8, path, ".fable");
+}
+
+pub fn walkFiles(alloc: Allocator) !FileIterator {
     var cwd = try fs.cwd().openDir(".", .{ .iterate = true });
     errdefer cwd.close();
 
@@ -47,6 +48,6 @@ pub fn walkFiles(
         .alloc = alloc,
         .cwd = cwd,
         .walker = walker,
-        .filter = filter,
+        .filter = filterFable,
     };
 }

@@ -5,7 +5,7 @@ const ArrayList = std.ArrayList;
 
 const model = @import("model.zig");
 const db = @import("db.zig");
-const working = @import("working.zig");
+const wd = @import("wd.zig");
 const Commit = model.Commit;
 const Tree = model.Tree;
 const Blob = model.Blob;
@@ -61,13 +61,9 @@ pub fn reinit(alloc: Allocator) !void {
     try db.putCommit(commit);
 }
 
-fn filterFable(path: []const u8) bool {
-    return !std.mem.startsWith(u8, path, ".fable");
-}
-
 pub fn makeCommit(alloc: Allocator, message: []const u8) !void {
     // Save blobs
-    var iter = try working.walkFiles(alloc, filterFable);
+    var iter = try wd.walkFiles(alloc);
     defer iter.deinit();
 
     var tree_items: ArrayList(Tree.Item) = .empty;
