@@ -45,7 +45,7 @@ pub fn walkFiles(alloc: Allocator) !FileIterator {
 
     const walker = try cwd.walk(alloc);
 
-    return .{ 
+    return .{
         .alloc = alloc,
         .cwd = cwd,
         .walker = walker,

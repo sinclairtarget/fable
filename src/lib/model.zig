@@ -10,7 +10,7 @@ pub const Commit = struct {
 
 pub const Tree = struct {
     children: []Item, // Always stored in sorted order
-    
+
     pub const Item = struct {
         path: []const u8, // Should be "name" maybe
         hash: []const u8,

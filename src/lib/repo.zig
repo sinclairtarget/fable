@@ -81,7 +81,7 @@ fn lessThan(ctx: void, lhs: Tree.Item, rhs: Tree.Item) bool {
 
 fn makeTree(alloc: Allocator, dirpath: []const u8) ![]const u8 {
     const cwd = fs.cwd();
-    var dir = try cwd.openDir(dirpath, .{.iterate = true});
+    var dir = try cwd.openDir(dirpath, .{ .iterate = true });
     defer dir.close();
 
     var tree_items: ArrayList(Tree.Item) = .empty;
@@ -95,29 +95,29 @@ fn makeTree(alloc: Allocator, dirpath: []const u8) ![]const u8 {
 
         // TODO: Are we sure we want to use the OS-specific path separator?
         const path = try fs.path.join(
-            alloc, 
-            &[_][]const u8{dirpath, entry.name},
+            alloc,
+            &[_][]const u8{ dirpath, entry.name },
         );
 
         if (entry.kind == .file) {
             const hash = try makeBlob(alloc, path);
-            try tree_items.append(alloc, .{.path = entry.name, .hash = hash});
+            try tree_items.append(alloc, .{ .path = entry.name, .hash = hash });
         } else if (entry.kind == .directory) {
             const hash = try makeTree(alloc, path);
-            try tree_items.append(alloc, .{.path = entry.name, .hash = hash});
+            try tree_items.append(alloc, .{ .path = entry.name, .hash = hash });
         }
     }
 
     // Ensure tree items are always in the same order! Sort by hash
     std.sort.heap(Tree.Item, tree_items.items, {}, lessThan);
 
-    const tree_hash = try db.putTree(alloc, .{.children = tree_items.items});
+    const tree_hash = try db.putTree(alloc, .{ .children = tree_items.items });
     return tree_hash;
 }
 
 fn makeBlob(alloc: Allocator, path: []const u8) ![]const u8 {
     const bytes = try wd.readFileContents(alloc, path);
-    const blob = Blob{.bytes = bytes};
+    const blob = Blob{ .bytes = bytes };
     const hash = try db.putBlob(alloc, blob);
     return hash;
 }
@@ -166,7 +166,7 @@ pub fn commitsIterator(alloc: Allocator) !CommitIterator {
 }
 
 pub fn changedFiles(
-    alloc: Allocator, 
+    alloc: Allocator,
     dirpath: []const u8,
     tree_hash: []const u8,
 ) ![]const []const u8 {
@@ -176,7 +176,7 @@ pub fn changedFiles(
     errdefer paths.deinit(alloc);
 
     const cwd = fs.cwd();
-    var dir = try cwd.openDir(dirpath, .{.iterate = true});
+    var dir = try cwd.openDir(dirpath, .{ .iterate = true });
     defer dir.close();
 
     var iter = dir.iterate();
@@ -186,8 +186,8 @@ pub fn changedFiles(
         }
 
         const path = try fs.path.join(
-            alloc, 
-            &[_][]const u8{dirpath, entry.name},
+            alloc,
+            &[_][]const u8{ dirpath, entry.name },
         );
 
         const tree_item = for (tree.children) |item| {

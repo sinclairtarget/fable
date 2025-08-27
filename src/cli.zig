@@ -41,7 +41,7 @@ pub fn run(alloc: Allocator, out: *Io.Writer, args: []const []const u8) !void {
 
 pub fn runInit(alloc: Allocator, out: *Io.Writer) !void {
     _ = out;
-    try repo.reinit(alloc,);
+    try repo.reinit(alloc);
 }
 
 pub fn runNew(out: *Io.Writer) !void {
@@ -78,8 +78,8 @@ pub fn runLog(alloc: Allocator, out: *Io.Writer) !void {
     var iter = try repo.commitsIterator(alloc);
     while (try iter.next()) |commit| {
         try out.print("{s}: {s} ({s})\n", .{
-            iter.current_hash.?, 
-            commit.message, 
+            iter.current_hash.?,
+            commit.message,
             commit.author,
         });
     }
@@ -88,8 +88,8 @@ pub fn runLog(alloc: Allocator, out: *Io.Writer) !void {
 
 pub fn runCommit(
     alloc: Allocator,
-    out: *Io.Writer, 
-    progname: []const u8, 
+    out: *Io.Writer,
+    progname: []const u8,
     args: []const []const u8,
 ) !void {
     if (args.len < 1) {
@@ -99,7 +99,7 @@ pub fn runCommit(
 
     const msg = args[0];
     const hash = try repo.makeCommit(alloc, msg);
-    try out.print("[{s}] {s}\n", .{hash, msg});
+    try out.print("[{s}] {s}\n", .{ hash, msg });
     try out.flush();
 }
 

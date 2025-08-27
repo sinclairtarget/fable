@@ -35,7 +35,7 @@ pub fn getCommit(alloc: Allocator, hash: []const u8) !*Commit {
     var buf: [128]u8 = undefined;
     var file_reader = file.reader(&buf);
     const reader = &file_reader.interface;
-    
+
     const commit = try alloc.create(Commit);
     errdefer alloc.destroy(commit);
 
@@ -94,7 +94,7 @@ pub fn getCommit(alloc: Allocator, hash: []const u8) !*Commit {
         .tree = tree,
         .parent = parent,
     };
-    
+
     // TODO: Check here that commit is valid?
 
     return commit;
@@ -203,7 +203,7 @@ pub fn getTree(alloc: Allocator, tree_hash: []const u8) !*Tree {
     var buf: [128]u8 = undefined;
     var file_reader = file.reader(&buf);
     const reader = &file_reader.interface;
-    
+
     const tree = try alloc.create(Tree);
     errdefer alloc.destroy(tree);
 
@@ -229,10 +229,10 @@ pub fn getTree(alloc: Allocator, tree_hash: []const u8) !*Tree {
         const hash = try alloc.alloc(u8, model.hash_len);
         @memcpy(hash, s);
 
-        try children.append(alloc, .{.path = path, .hash = hash});
+        try children.append(alloc, .{ .path = path, .hash = hash });
     }
 
-    tree.* = .{.children = children.items};
+    tree.* = .{ .children = children.items };
     return tree;
 }
 
