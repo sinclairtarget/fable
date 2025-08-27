@@ -3,6 +3,7 @@
 const std = @import("std");
 const fs = std.fs;
 const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 
 pub const FileIterator = struct {
     alloc: Allocator,
@@ -50,4 +51,20 @@ pub fn walkFiles(alloc: Allocator) !FileIterator {
         .walker = walker,
         .filter = filterFable,
     };
+}
+
+pub fn readFileContents(alloc: Allocator, path: []const u8) ![]const u8 {
+    const cwd = fs.cwd();
+    var file = try cwd.openFile(path, .{});
+    defer file.close();
+
+    var buf: [128]u8 = undefined;
+    var file_reader = file.reader(&buf);
+    const reader = &file_reader.interface;
+
+    var bytes: ArrayList(u8) = .empty;
+    defer bytes.deinit(alloc);
+    try reader.appendRemainingUnlimited(alloc, &bytes);
+
+    return bytes.items;
 }

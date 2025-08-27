@@ -4,6 +4,7 @@ const Allocator = std.mem.Allocator;
 
 const die = @import("fatal.zig").die;
 const repo = @import("lib/repo.zig");
+const db = @import("lib/db.zig");
 
 pub fn run(alloc: Allocator, out: *Io.Writer, args: []const []const u8) !void {
     if (args.len <= 1) {
@@ -55,8 +56,16 @@ pub fn runRecord(out: *Io.Writer) !void {
 
 pub fn runStatus(alloc: Allocator, out: *Io.Writer) !void {
     const head_commit_hash = try repo.getHeadCommit(alloc);
+    const commit = try db.getCommit(alloc, head_commit_hash);
+
     const short_hash = head_commit_hash[0..6];
     try out.print("On commit {s}\n", .{short_hash});
+
+    try out.print("Changed:\n", .{});
+    const changed = try repo.changedFiles(alloc, ".", commit.tree);
+    for (changed) |path| {
+        try out.print("  {s}\n", .{path});
+    }
     try out.flush();
 }
 
@@ -88,7 +97,10 @@ pub fn runCommit(
         die("Message required for commit\n", .{});
     }
 
-    try repo.makeCommit(alloc, args[0]);
+    const msg = args[0];
+    const hash = try repo.makeCommit(alloc, msg);
+    try out.print("[{s}] {s}\n", .{hash, msg});
+    try out.flush();
 }
 
 pub fn runCheckout(out: *Io.Writer) !void {
